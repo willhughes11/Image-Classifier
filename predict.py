@@ -19,17 +19,17 @@ parser.add_argument('--checkpoint', type = str, default = 'checkpoint.pth', help
 parser.add_argument('--topk', type = int, default = 5, help = 'Top N Classes and Probabilities')
 parser.add_argument('--json', type = str, default = 'flower_to_name.json', help = 'class_to_name json file')
 parser.add_argument('--gpu', type = str, default = 'cuda', help = 'GPU or CPU')
-arguments,unknown = parser.parse_known_args()
+arg,unknown = parser.parse_known_args()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-class_name = open_json(arguments.json)
+class_name = open_json(arg.json)
 
-model = load_checkpoint(arguments.checkpoint)
+model = load_checkpoint(arg.checkpoint)
 
-checkpoint = torch.load(arguments.checkpoint)
+checkpoint = torch.load(arg.checkpoint)
 
-image = process_image(arguments.image_dir)
+image = process_image(arg.image_dir)
 
 probs, classes = predict(random_flower, model)
 
