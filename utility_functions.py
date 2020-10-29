@@ -3,6 +3,7 @@ from torchvision import transforms, datasets
 
 import random
 import os
+import json
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -103,23 +104,29 @@ def imshow(image, ax=None, title=None, normalize=True):
 
     return ax
 
-def prediction_test(data_dir,flower_to_name,model):
-    random_folder = random.randint(1,102)
-    random_image = random.choice(os.listdir(f'{data_dir}/test/{random_folder}'))
-    random_flower = f'{data_dir}/test/{random_folder}/{random_image}'
-    probs, classes = predict(random_flower, model)
-
-    plt.figure(figsize=(6,10))
-    plot_1 = plt.subplot(2,1,1)
-    image = process_image(random_flower)
-
+def prediction_test(flower_to_name,classes,probs,random_folder):
+    
     flower_title = flower_to_name[str(random_folder)].capitalize()
-
-    imshow(image, plot_1, title=flower_title)
-
     flower_names = [flower_to_name[i] for i in classes]
 
-    plt.subplot(2,1,2)
-    sb.barplot(x=probs, y=flower_names, color=sb.color_palette()[0])
+    print('------- Model Prediction Test -------')
+    print(f'Correct Flower Name: {flower_title}')
+    print('-------- Probability --------')
+    for i in range(len(probs)):
+        print(f'{i+1} - Flower: {flower_names[i]}... Probability: {(probs[i]*100):.2f}%')
 
-    plt.show()
+def predict(image_path, model, topk=5):
+    image = process_image(image_path)
+    image = torch.from_numpy(image).type(torch.FloatTensor)
+    image = image.unsqueeze(0)
+    logps = model.forward(image)
+    ps = torch.exp(logps)
+    top_ps,top_indices = ps.topk(topk)
+
+    top_ps = top_ps.detach().type(torch.FloatTensor).numpy().tolist()[0]
+    top_indices = top_indices.detach().type(torch.FloatTensor).numpy().tolist()[0]
+
+    idx_to_class = {value: key for key, value in model.class_to_idx.items()}
+    top_classes = [idx_to_class[index] for index in top_indices]
+
+    return top_ps, top_classes

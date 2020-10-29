@@ -5,8 +5,8 @@ import os
 
 from torch import nn, optim
 from torchvision import models
-from utility_functions import open_json
-from model_functions import save_checkpoint,validation,train_classifer,classifier_test
+from utility_functions import imshow, open_json, process_image, predict, prediction_test
+from model_functions import load_checkpoint
 
 data_dir = 'flower_data'
 random_folder = random.randint(1,102)
@@ -19,4 +19,16 @@ parser.add_argument('--checkpoint', type = str, default = 'checkpoint.pth', help
 parser.add_argument('--topk', type = int, default = 5, help = 'Top N Classes and Probabilities')
 parser.add_argument('--json', type = str, default = 'flower_to_name.json', help = 'class_to_name json file')
 parser.add_argument('--gpu', type = str, default = 'cuda', help = 'GPU or CPU')
-arguments = parser.parse_args()
+arguments,unknown = parser.parse_known_args()
+
+class_name = open_json(arguments.json)
+
+model = load_checkpoint(arguments.checkpoint)
+
+checkpoint = torch.load(arguments.checkpoint)
+
+image = process_image(arguments.image_dir)
+
+probs, classes = predict(random_flower, model)
+
+prediction_test(class_name,classes,probs,random_folder)

@@ -2,19 +2,31 @@ import torch
 from torch import nn
 from torchvision import models
 
-def save_checkpoint(model,train_data):
-    model.class_to_idx = train_data.class_to_idx
-    checkpoint = {
-        'arch': 'vgg16',
-        'class_to_idx': model.class_to_idx,
-        'model_state_dict': model.state_dict() 
-    }
+def save_checkpoint(model, training_dataset, arch, epochs, lr, hidden_units, input_size):
+
+    model.class_to_idx = training_dataset.class_to_idx
+    checkpoint = {'input_size': (3, 224, 224),
+                  'output_size': 102,
+                  'hidden_layer_units': hidden_units,
+                  'batch_size': 64,
+                  'learning_rate': lr,
+                  'model_name': arch,
+                  'model_state_dict': model.state_dict(),
+                  'epochs': epochs,
+                  'class_to_idx': model.class_to_idx,
+                  'clf_input': input_size}
 
     torch.save(checkpoint, 'checkpoint.pth')
 
 def load_checkpoint(filepath):
     checkpoint = torch.load(filepath)
-    model = models.vgg16(pretrained=True)
+    if checkpoint['model_name'] == 'vgg':
+        model = models.vgg16(pretrained=True)
+     
+    elif checkpoint['model_name'] == 'densenet':  
+        model = models.densenet121(pretrained=True)
+    else:
+        print("Model Not Recognized")
 
     for param in model.parameters():
         param.required_grad = False
@@ -27,6 +39,7 @@ def load_checkpoint(filepath):
                                  nn.LogSoftmax(dim=1))
 
     model.load_state_dict(checkpoint['model_state_dict'])
+
     return model
 
 def validation(model, validloader, device, criterion):
@@ -44,11 +57,12 @@ def validation(model, validloader, device, criterion):
         accuracy += torch.mean(equals.type(torch.FloatTensor))
     return loss, accuracy
 
-def train_classifer(model,trainloader,device,optimizer,criterion,validloader):
-    epochs = 5
+
+def train_classifer(model,trainloader,arg_epochs,device,optimizer,criterion,validloader):
+    epochs = arg_epochs
     steps = 0
     print_every = 25
-    train_losses, valid_losses = [], []
+    
     for epoch in range(epochs):
         
         running_loss = 0
@@ -73,11 +87,8 @@ def train_classifer(model,trainloader,device,optimizer,criterion,validloader):
                 model.eval()
                 with torch.no_grad():
                 
-                  valid_loss,accuracy = validation(model, validloader, criterion)
+                  valid_loss,accuracy = validation(model,validloader,device,criterion)
                   
-                  train_losses.append(running_loss/len(trainloader))
-                  valid_losses.append(valid_loss/len(validloader))
-
                 print(f"Epoch: {epoch+1}/{epochs}.. ",
                       f"Training Loss: {(running_loss/len(trainloader)):.3f}.. ",
                       f"Validation Loss: {(valid_loss/len(validloader)):.3f}.. ",
@@ -102,20 +113,4 @@ def classifier_test(model,device,testloader,criterion):
             top_p, top_class = ps.topk(1, dim=1)
             equals = top_class == labels.view(*top_class.shape)
             accuracy += torch.mean(equals.type(torch.FloatTensor))
-        print(f"Network Accuracy: {accuracy/len(testloader):.3f}")
-
-def predict(image_path, model, topk=5):
-    image = process_image(image_path)
-    image = torch.from_numpy(image).type(torch.FloatTensor)
-    image = image.unsqueeze(0)
-    logps = model.forward(image)
-    ps = torch.exp(logps)
-    top_ps,top_indices = ps.topk(topk)
-
-    top_ps = top_ps.detach().type(torch.FloatTensor).numpy().tolist()[0]
-    top_indices = top_indices.detach().type(torch.FloatTensor).numpy().tolist()[0]
-
-    idx_to_class = {value: key for key, value in model.class_to_idx.items()}
-    top_classes = [idx_to_class[index] for index in top_indices]
-
-    return top_ps, top_classes
+        print(f"Model Accuracy: {accuracy/len(testloader):.3f}")
