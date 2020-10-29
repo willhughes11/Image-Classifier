@@ -1,2 +1,2 @@
 # Image-Classifier
- ## Udacity AI Programming with Python Capstone Project
+Udacity AI Programming with Python Capstone Project
