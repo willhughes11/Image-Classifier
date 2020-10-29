@@ -21,6 +21,8 @@ parser.add_argument('--json', type = str, default = 'flower_to_name.json', help 
 parser.add_argument('--gpu', type = str, default = 'cuda', help = 'GPU or CPU')
 arguments,unknown = parser.parse_known_args()
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 class_name = open_json(arguments.json)
 
 model = load_checkpoint(arguments.checkpoint)
